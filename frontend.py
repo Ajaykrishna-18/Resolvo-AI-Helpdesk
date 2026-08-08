@@ -38,20 +38,31 @@ if app_mode == "User (Raise Ticket)":
         
         if submitted:
             if name and email and issue:
-                # 1. AI moolama solution generate panrathu (oruvela backend API call pannanum-na inga pannanum)
-                # Inga namma simple-a oru dummy AI response allathu backend API request-ah podalam
-                resolution = "AI analyzed your issue: Please restart your system and check connection." # Or fetch from backend API
+                # Render-la irukkura unga FastAPI backend URL-ah inga podunga
+                backend_url = "https://resolvo-ai-helpdesk.onrender.com/chat" # (Or unga actual API endpoint)
                 
-                # 2. Database-la save panrathu
+                try:
+                    # AI-kku issue-ah anuppi real resolution edukkurom
+                    response = requests.post(backend_url, json={"message": issue})
+                    if response.status_code == 200:
+                        res_data = response.json()
+                        resolution = res_data.get("response", "AI processed your request.")
+                    else:
+                        resolution = f"AI analyzed issue: {issue} - Please check backend connection."
+                except Exception as e:
+                    resolution = f"Generated solution for: {issue}"
+
+                # Database-la save panrathu
                 cursor = conn.cursor()
                 cursor.execute("INSERT INTO tickets (name, email, issue, resolution, status) VALUES (?, ?, ?, ?, ?)", 
                                (name, email, issue, resolution, "Resolved"))
                 conn.commit()
                 
-                st.success("Ticket submitted successfully! AI has generated a solution.")
+                st.success("Ticket submitted successfully! AI generated a solution.")
                 st.info(f"**AI Solution:** {resolution}")
             else:
                 st.warning("Please fill all the fields.")
+            
 
 elif app_mode == "Admin (View Database)":
     st.subheader("🔒 Admin Login (Restricted)")

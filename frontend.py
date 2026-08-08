@@ -10,11 +10,14 @@ st.title("🎧 Resolvo: AI Agent Dashboard")
 st.write("Welcome, Support Agent! Here are the tickets processed by our AI.")
 
 # Database-la irunthu data edukkurom
+@st.cache_data(ttl=5)
 def load_data():
-    conn = sqlite3.connect('resolvo.db')
-    df = pd.read_sql_query("SELECT * FROM tickets", conn)
-    conn.close()
-    return df
+    init_db()  # Database table irukkaa nu check pannum, illana create pannum
+    try:
+        return pd.read_sql_query("SELECT * FROM tickets", conn)
+    except Exception as e:
+        # Error vanthalum app crash aagathu, empty table kaattum
+        return pd.DataFrame()
 
 df = load_data()
 

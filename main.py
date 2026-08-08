@@ -28,22 +28,24 @@ def read_root():
 @app.post("/tickets/")
 def create_ticket(ticket: TicketCreate, db: Session = Depends(get_db)):
     try:
-        # AI analysis logic
+        # AI call-ah try panrom
         ai_response = ai_agent.analyze_ticket(ticket.ticket_text)
-        resolution = ai_response if ai_response else "We are working on your issue."
+        resolution = ai_response if ai_response else "Default resolution."
+        
+        # Database insert logic inga irukkum...
+        new_ticket = Ticket(
+            customer_name=ticket.customer_name,
+            customer_email=ticket.customer_email,
+            issue=ticket.ticket_text,
+            resolution=resolution,
+            status="Resolved"
+        )
+        db.add(new_ticket)
+        db.commit()
+        
+        return {"resolution": resolution, "status": "Success"}
+        
     except Exception as e:
-        # Error vantha crash aagathu
-        resolution = "System is busy, we will contact you shortly."
-
-    # Database-la insert panra logic (Check your variable names!)
-    new_ticket = Ticket(
-        customer_name=ticket.customer_name,
-        customer_email=ticket.customer_email,
-        issue=ticket.ticket_text,
-        resolution=resolution,
-        status="Resolved"
-    )
-    db.add(new_ticket)
-    db.commit()
-    
-    return {"resolution": resolution}
+        # Inga enna error nu print pannum, appo Render logs-la exact error theriyum
+        print(f"CRASH ERROR: {str(e)}")
+        return {"resolution": f"Error occurred: {str(e)}", "status": "Failed"}

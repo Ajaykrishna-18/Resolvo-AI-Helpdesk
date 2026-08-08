@@ -1,48 +1,74 @@
 import streamlit as st
 import pandas as pd
+import requests
 import sqlite3
-from database import init_db
-init_db()  # App start aagum pothu table create aagum
 
-# Page setup
-st.set_page_config(page_title="Resolvo Dashboard", layout="wide")
-st.title("🎧 Resolvo: AI Agent Dashboard")
-st.write("Welcome, Support Agent! Here are the tickets processed by our AI.")
+# Database connection
+conn = sqlite3.connect("resolvo.db", check_same_thread=False)
 
-# Database-la irunthu data edukkurom
-@st.cache_data(ttl=5)
-def load_data():
-    try:
-        init_db()
-        return pd.read_sql_query("SELECT * FROM tickets", conn)
-    except Exception as e:
-        # Table innum illana oru empty dataframe-ah return pannum
-        return pd.DataFrame(columns=["id", "issue", "status", "resolution"])
+def init_db():
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS tickets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT,
+            email TEXT,
+            issue TEXT,
+            resolution TEXT,
+            status TEXT
+        )
+    """)
+    conn.commit()
 
-df = load_data()
+init_db()
 
-if not df.empty:
-    # Chinna chinna stats kaatom
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Total Tickets", len(df))
-    col2.metric("AI Resolved", len(df[df['status'] == 'Resolved']))
-    col3.metric("Escalated to Human", len(df[df['status'] == 'Escalated']))
+st.title("🎧 Resolvo: AI Helpdesk")
 
-    st.markdown("---")
-    st.subheader("All Tickets")
-    # Table-ah display pandrom
-    st.dataframe(df[['id', 'customer_name', 'category', 'status']], use_container_width=True)
+# Sidebar for Navigation (User vs Admin)
+app_mode = st.sidebar.selectbox("Choose Mode", ["User (Raise Ticket)", "Admin (View Database)"])
+
+if app_mode == "User (Raise Ticket)":
+    st.subheader("Submit your issue to our AI Assistant")
     
-    st.markdown("---")
-    st.subheader("Ticket Deep Dive")
-    # Oru ticket-ah select panni full details paarkalam
-    selected_id = st.selectbox("Select Ticket ID to review:", df['id'])
-    ticket_data = df[df['id'] == selected_id].iloc[0]
-    
-    st.write(f"**Customer:** {ticket_data['customer_name']} | **Email:** {ticket_data['customer_email']}")
-    st.write(f"**Category:** {ticket_data['category']} | **Status:** {ticket_data['status']}")
-    st.warning(f"**Customer Problem:** {ticket_data['ticket_text']}")
-    st.success(f"**AI Generated Reply:** \n\n{ticket_data['ai_generated_reply']}")
+    with st.form("user_ticket_form"):
+        name = st.text_input("Your Name")
+        email = st.text_input("Your Email")
+        issue = st.text_area("Describe your problem")
+        submitted = st.form_submit_button("Submit Ticket")
+        
+        if submitted:
+            if name and email and issue:
+                # 1. AI moolama solution generate panrathu (oruvela backend API call pannanum-na inga pannanum)
+                # Inga namma simple-a oru dummy AI response allathu backend API request-ah podalam
+                resolution = "AI analyzed your issue: Please restart your system and check connection." # Or fetch from backend API
+                
+                # 2. Database-la save panrathu
+                cursor = conn.cursor()
+                cursor.execute("INSERT INTO tickets (name, email, issue, resolution, status) VALUES (?, ?, ?, ?, ?)", 
+                               (name, email, issue, resolution, "Resolved"))
+                conn.commit()
+                
+                st.success("Ticket submitted successfully! AI has generated a solution.")
+                st.info(f"**AI Solution:** {resolution}")
+            else:
+                st.warning("Please fill all the fields.")
 
-else:
-    st.info("No tickets in the database yet. Go to FastAPI Swagger UI and create one!")
+elif app_mode == "Admin (View Database)":
+    st.subheader("🔒 Admin Login (Restricted)")
+    password = st.text_input("Enter Admin Password", type="password")
+    
+    # Neenga mattum use panra password (e.g., "admin123")
+    if password == "admin123":
+        st.success("Welcome Admin!")
+        
+        # Database-la irukkura ellaa tickets-ahyum read panni kaattum
+        try:
+            df = pd.read_sql_query("SELECT * FROM tickets", conn)
+            if not df.empty:
+                st.dataframe(df)
+            else:
+                st.warning("No tickets found in database yet.")
+        except Exception as e:
+            st.error(f"Error loading database: {e}")
+    elif password != "":
+        st.error("Incorrect Password!")

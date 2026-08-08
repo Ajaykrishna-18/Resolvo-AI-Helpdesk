@@ -38,31 +38,30 @@ if app_mode == "User (Raise Ticket)":
         
         if submitted:
             if name and email and issue:
-                # Render-la irukkura unga FastAPI backend URL-ah inga podunga
-                backend_url = "https://resolvo-ai-helpdesk.onrender.com/chat" # (Or unga actual API endpoint)
+                # Unga Render backend correct URL & route path
+                backend_url = "https://resolvo-ai-helpdesk.onrender.com/tickets/"
+                
+                # Backend-kku anuppura data (TicketCreate schema-oda match aaganum)
+                payload = {
+                    "customer_name": name,
+                    "customer_email": email,
+                    "ticket_text": issue
+                }
                 
                 try:
-                    # AI-kku issue-ah anuppi real resolution edukkurom
-                    response = requests.post(backend_url, json={"message": issue})
+                    response = requests.post(backend_url, json=payload)
                     if response.status_code == 200:
                         res_data = response.json()
-                        resolution = res_data.get("response", "AI processed your request.")
+                        # Backend return panra AI resolution-ah eduthurom
+                        resolution = res_data.get("resolution", "AI processed your request successfully.")
+                        st.success("Ticket submitted successfully and processed by AI!")
+                        st.info(f"**AI Solution:** {resolution}")
                     else:
-                        resolution = f"AI analyzed issue: {issue} - Please check backend connection."
+                        st.error(f"Failed to submit ticket. Server returned status: {response.status_code}")
                 except Exception as e:
-                    resolution = f"Generated solution for: {issue}"
-
-                # Database-la save panrathu
-                cursor = conn.cursor()
-                cursor.execute("INSERT INTO tickets (name, email, issue, resolution, status) VALUES (?, ?, ?, ?, ?)", 
-                               (name, email, issue, resolution, "Resolved"))
-                conn.commit()
-                
-                st.success("Ticket submitted successfully! AI generated a solution.")
-                st.info(f"**AI Solution:** {resolution}")
+                    st.error(f"Connection error: {e}")
             else:
                 st.warning("Please fill all the fields.")
-            
 
 elif app_mode == "Admin (View Database)":
     st.subheader("🔒 Admin Login (Restricted)")

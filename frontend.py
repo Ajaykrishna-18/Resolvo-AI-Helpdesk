@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
 import sqlite3
+from database import init_db
+init_db()  # App start aagum pothu table create aagum
 
 # Page setup
 st.set_page_config(page_title="Resolvo Dashboard", layout="wide")

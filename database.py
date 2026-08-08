@@ -11,3 +11,10 @@ engine = create_engine(
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
+# Tables-ah create panna intha line mukkiyam
+def init_db():
+    Base.metadata.create_all(bind=engine)
+ #   git add .
+#git commit -m "Add database table creation command"
+#
+# git push origin main

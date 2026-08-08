@@ -12,12 +12,12 @@ st.write("Welcome, Support Agent! Here are the tickets processed by our AI.")
 # Database-la irunthu data edukkurom
 @st.cache_data(ttl=5)
 def load_data():
-    init_db()  # Database table irukkaa nu check pannum, illana create pannum
     try:
+        init_db()
         return pd.read_sql_query("SELECT * FROM tickets", conn)
     except Exception as e:
-        # Error vanthalum app crash aagathu, empty table kaattum
-        return pd.DataFrame()
+        # Table innum illana oru empty dataframe-ah return pannum
+        return pd.DataFrame(columns=["id", "issue", "status", "resolution"])
 
 df = load_data()
 
